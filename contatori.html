@@ -421,7 +421,7 @@
             const maxVotes = Math.max(...votes);
             if (maxVotes > 0) {
                 const topIndex = votes.indexOf(maxVotes);
-                document.getElementById('topCandidate').textContent = candidates[topIndex].name.split(' ')[0];
+                document.getElementById('topCandidate').textContent = candidates[topIndex].name;
             } else {
                 document.getElementById('topCandidate').textContent = '—';
             }
