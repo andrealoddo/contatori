@@ -126,7 +126,7 @@
     <script async defer src="https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-database.js"></script>
     
     <script>
- const firebaseConfig = {
+const firebaseConfig = {
 
   apiKey: "AIzaSyD2X5-fZXj5QfrvyC9TFO6Ly7x5h7IQnDE",
 
@@ -143,6 +143,7 @@
   appId: "1:660900086410:web:bd49486b79c611d6b0a373"
 
 };
+
 
 
         const candidates = [
@@ -176,10 +177,26 @@
                 const db = firebase.database(app);
                 votesRef = db.ref('votes');
 
+                // Monitora lo stato della connessione
+                const connRef = db.ref('.info/connected');
+                connRef.on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        setConnected(true);
+                        // Inizializza il database se è vuoto
+                        votesRef.once('value', (snap) => {
+                            if (!snap.exists()) {
+                                votesRef.set(Array(candidates.length).fill(0));
+                            }
+                        });
+                    } else {
+                        setConnected(false, 'Disconnesso');
+                    }
+                });
+
+                // Ascolta i cambiamenti dei dati
                 votesRef.on('value', (snapshot) => {
                     votes = snapshot.val() || Array(candidates.length).fill(0);
                     render();
-                    setConnected(true);
                 }, (err) => {
                     setConnected(false, err.message);
                 });
