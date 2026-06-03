@@ -418,9 +418,12 @@
             const total = votes.reduce((a, b) => a + b, 0);
             document.getElementById('totalVotes').textContent = total;
             
-            const maxVotes = Math.max(...votes);
+            // Escludi il voto di lista (indice 0) dal conteggio del più votato
+            const candidateVotes = votes.slice(1);
+            const maxVotes = Math.max(...candidateVotes);
             if (maxVotes > 0) {
-                const topIndex = votes.indexOf(maxVotes);
+                const topIndexInCandidates = candidateVotes.indexOf(maxVotes);
+                const topIndex = topIndexInCandidates + 1; // Aggiungi 1 perché abbiamo escluso il voto di lista
                 document.getElementById('topCandidate').textContent = candidates[topIndex].name;
             } else {
                 document.getElementById('topCandidate').textContent = '—';
