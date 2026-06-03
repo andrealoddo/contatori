@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Conteggio Voti</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #999;
+        }
+        
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .status.online {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+        
+        .status.offline {
+            background: #ffcdd2;
+            color: #c62828;
+        }
+        
+        .counters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .counter-card {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .counter-card:hover {
+            background: #f0f1f5;
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+        }
+        
+        .counter-card.special {
+            background: #fff3e0;
+            border-color: #ff9800;
+        }
+        
+        .counter-card.special:hover {
+            background: #ffe0b2;
+            border-color: #f57c00;
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
+        }
+        
+        .counter-name {
+            font-size: 13px;
+            color: #999;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        
+        .counter-card.special .counter-name {
+            color: #f57c00;
+        }
+        
+        .counter-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 14px;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .counter-card.special .counter-value {
+            color: #ff9800;
+        }
+        
+        .counter-buttons {
+            display: flex;
+            gap: 6px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 10px 8px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1.5px solid;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-plus {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        
+        .btn-plus:hover:not(:disabled) {
+            background: #45a049;
+            border-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        
+        .btn-plus:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        .btn-minus {
+            background: #f44336;
+            color: white;
+            border-color: #f44336;
+        }
+        
+        .btn-minus:hover:not(:disabled) {
+            background: #da190b;
+            border-color: #da190b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+        }
+        
+        .btn-minus:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        .btn-reset {
+            background: #ff9800;
+            color: white;
+            border-color: #ff9800;
+        }
+        
+        .btn-reset:hover:not(:disabled) {
+            background: #e68900;
+            border-color: #e68900;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+        }
+        
+        .btn-reset:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .reset-all {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .reset-all:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .export-btn {
+            padding: 12px 24px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .export-btn:hover:not(:disabled) {
+            background: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+        }
+        
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #999;
+            margin-top: 30px;
+        }
+        
+        .summary {
+            background: #f0f1f5;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .summary-item {
+            display: inline-block;
+            margin: 8px 16px;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .counters-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .reset-all, .export-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Conteggio Voti</h1>
+            <p>Elezioni - Conteggio candidati (Sincronizzato con Firebase)</p>
+        </div>
+        
+        <div class="status" id="statusIndicator">
+            🔄 Connessione...
+        </div>
+        
+        <div class="summary">
+            <div class="summary-item">
+                <div class="summary-label">Voti Totali</div>
+                <div class="summary-value" id="totalVotes">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Candidato più votato</div>
+                <div class="summary-value" id="topCandidate">—</div>
+            </div>
+        </div>
+        
+        <div class="counters-grid" id="countersGrid"></div>
+        
+        <div class="actions">
+            <button class="reset-all" onclick="resetAll()" id="resetBtn">🔄 Resetta Tutto</button>
+            <button class="export-btn" onclick="exportData()" id="exportBtn">📥 Esporta Risultati</button>
+        </div>
+        
+        <div class="footer">
+            I dati vengono sincronizzati in tempo reale con Firebase
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvuwKGosaHRCq8JOgeFUAiFx2sgTPk7qw",
+            authDomain: "contatore-voti-1d7b4.firebaseapp.com",
+            databaseURL: "https://contatore-voti-1d7b4-default-rtdb.firebaseio.com",
+            projectId: "contatore-voti-1d7b4",
+            storageBucket: "contatore-voti-1d7b4.firebasestorage.app",
+            messagingSenderId: "937284020432",
+            appId: "1:937284020432:web:c7442ae635b59a880056d5",
+            measurementId: "G-CRX89MKRHM"
+};
+        
+        // Inizializza Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database(app);
+        const votesRef = database.ref('votes');
+        
+        const candidates = [
+            { name: 'Voto di lista', special: true },
+            { name: 'Cannea Fabrizio', special: false },
+            { name: 'Loddo Francesca', special: false },
+            { name: 'Massidda Anna Maria', special: false },
+            { name: 'Matta Paolo', special: false },
+            { name: 'Mereu Sebastiano', special: false },
+            { name: 'Peddis Renzo', special: false },
+            { name: 'Piras Daniela', special: false },
+            { name: 'Sardara Giorgio', special: false },
+            { name: 'Serusi Nicola', special: false },
+            { name: 'Sini Patrizia', special: false },
+            { name: 'Tatti Michele', special: false },
+            { name: 'Tiddia Alberto', special: false }
+        ];
+        
+        let votes = Array(candidates.length).fill(0);
+        let isOnline = false;
+        
+        // Ascolta i cambiamenti da Firebase
+        votesRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                votes = data;
+            } else {
+                votes = Array(candidates.length).fill(0);
+            }
+            renderCounters();
+            updateSummary();
+            updateStatusIndicator();
+        }, (error) => {
+            console.error('Errore Firebase:', error);
+            updateStatusIndicator();
+        });
+        
+        // Monitora la connessione
+        const connectedRef = database.ref('.info/connected');
+        connectedRef.on('value', (snapshot) => {
+            isOnline = snapshot.val() === true;
+            updateStatusIndicator();
+        });
+        
+        function updateStatusIndicator() {
+            const indicator = document.getElementById('statusIndicator');
+            if (isOnline) {
+                indicator.className = 'status online';
+                indicator.textContent = '✅ Connesso - Dati sincronizzati in tempo reale';
+                document.getElementById('resetBtn').disabled = false;
+                document.getElementById('exportBtn').disabled = false;
+            } else {
+                indicator.className = 'status offline';
+                indicator.textContent = '⚠️ Non connesso - Attesa di connessione...';
+                document.getElementById('resetBtn').disabled = true;
+                document.getElementById('exportBtn').disabled = true;
+            }
+        }
+        
+        // Renderizza i contatori
+        function renderCounters() {
+            const grid = document.getElementById('countersGrid');
+            grid.innerHTML = '';
+            
+            candidates.forEach((candidate, index) => {
+                const card = document.createElement('div');
+                card.className = 'counter-card' + (candidate.special ? ' special' : '');
+                card.innerHTML = `
+                    <div class="counter-name">${candidate.name}</div>
+                    <div class="counter-value" data-index="${index}">${votes[index] || 0}</div>
+                    <div class="counter-buttons">
+                        <button class="btn-plus" onclick="increment(${index})" ${!isOnline ? 'disabled' : ''}>➕</button>
+                        <button class="btn-minus" onclick="decrement(${index})" ${!isOnline ? 'disabled' : ''}>➖</button>
+                        <button class="btn-reset" onclick="reset(${index})" ${!isOnline ? 'disabled' : ''}>🔄</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+        
+        // Incrementa
+        function increment(index) {
+            const newVotes = [...votes];
+            newVotes[index]++;
+            if (index !== 0) {
+                newVotes[0]++;
+            }
+            votesRef.set(newVotes);
+        }
+        
+        // Decrementa
+        function decrement(index) {
+            const newVotes = [...votes];
+            if (newVotes[index] > 0) {
+                newVotes[index]--;
+            }
+            if (index !== 0 && newVotes[0] > 0) {
+                newVotes[0]--;
+            }
+            votesRef.set(newVotes);
+        }
+        
+        // Resetta singolo
+        function reset(index) {
+            const newVotes = [...votes];
+            newVotes[index] = 0;
+            votesRef.set(newVotes);
+        }
+        
+        // Resetta tutti
+        function resetAll() {
+            if (confirm('Sei sicuro di voler resettare tutti i contatori?')) {
+                votesRef.set(Array(candidates.length).fill(0));
+            }
+        }
+        
+        // Aggiorna il riepilogo
+        function updateSummary() {
+            const total = votes.reduce((a, b) => a + b, 0);
+            document.getElementById('totalVotes').textContent = total;
+            
+            const candidateVotes = votes.slice(1);
+            const maxVotes = Math.max(...candidateVotes);
+            if (maxVotes > 0) {
+                const topIndexInCandidates = candidateVotes.indexOf(maxVotes);
+                const topIndex = topIndexInCandidates + 1;
+                document.getElementById('topCandidate').textContent = candidates[topIndex].name;
+            } else {
+                document.getElementById('topCandidate').textContent = '—';
+            }
+        }
+        
+        // Esporta i dati
+        function exportData() {
+            let text = 'CONTEGGIO VOTI\n';
+            text += '================\n\n';
+            
+            candidates.forEach((candidate, index) => {
+                text += candidate.name + ': ' + (votes[index] || 0) + '\n';
+            });
+            
+            const total = votes.reduce((a, b) => a + b, 0);
+            text += '\n================\n';
+            text += 'TOTALE VOTI: ' + total + '\n';
+            
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', 'risultati_voti.txt');
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+            
+            alert('Risultati esportati! ✅');
+        }
+        
+        // Inizializza
+        renderCounters();
+        updateSummary();
+    </script>
+</body>
+</html>
