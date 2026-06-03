@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📊 Contatori Interattivi</title>
+    <title>📊 Conteggio Voti</title>
     <style>
         * {
             margin: 0;
@@ -16,14 +16,12 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
         
         .container {
             width: 100%;
-            max-width: 500px;
+            max-width: 1000px;
+            margin: 0 auto;
             background: white;
             border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -48,8 +46,9 @@
         
         .counters-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 16px;
+            margin-bottom: 20px;
         }
         
         .counter-card {
@@ -67,6 +66,17 @@
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
         }
         
+        .counter-card.special {
+            background: #fff3e0;
+            border-color: #ff9800;
+        }
+        
+        .counter-card.special:hover {
+            background: #ffe0b2;
+            border-color: #f57c00;
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
+        }
+        
         .counter-name {
             font-size: 13px;
             color: #999;
@@ -76,12 +86,20 @@
             margin-bottom: 12px;
         }
         
+        .counter-card.special .counter-name {
+            color: #f57c00;
+        }
+        
         .counter-value {
             font-size: 36px;
             font-weight: 700;
             color: #667eea;
             margin-bottom: 14px;
             font-variant-numeric: tabular-nums;
+        }
+        
+        .counter-card.special .counter-value {
+            color: #ff9800;
         }
         
         .counter-buttons {
@@ -152,19 +170,14 @@
             transform: translateY(0);
         }
         
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
-            font-size: 12px;
-            color: #999;
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
         }
         
         .reset-all {
-            width: 100%;
-            padding: 12px;
-            margin-top: 20px;
+            padding: 12px 24px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
@@ -180,7 +193,61 @@
             box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
         }
         
-        @media (max-width: 480px) {
+        .export-btn {
+            padding: 12px 24px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .export-btn:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+        }
+        
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #999;
+            margin-top: 30px;
+        }
+        
+        .summary {
+            background: #f0f1f5;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .summary-item {
+            display: inline-block;
+            margin: 8px 16px;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        @media (max-width: 768px) {
             .container {
                 padding: 20px;
             }
@@ -193,8 +260,12 @@
                 grid-template-columns: 1fr;
             }
             
-            .counter-value {
-                font-size: 28px;
+            .actions {
+                flex-direction: column;
+            }
+            
+            .reset-all, .export-btn {
+                width: 100%;
             }
         }
     </style>
@@ -202,13 +273,27 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📊 Contatori</h1>
-            <p>Clicca i bottoni per aggiornare i valori</p>
+            <h1>📊 Conteggio Voti</h1>
+            <p>Elezioni - Conteggio candidati</p>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-item">
+                <div class="summary-label">Voti Totali</div>
+                <div class="summary-value" id="totalVotes">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Candidato più votato</div>
+                <div class="summary-value" id="topCandidate">—</div>
+            </div>
         </div>
         
         <div class="counters-grid" id="countersGrid"></div>
         
-        <button class="reset-all" onclick="resetAll()">🔄 Resetta Tutti</button>
+        <div class="actions">
+            <button class="reset-all" onclick="resetAll()">🔄 Resetta Tutto</button>
+            <button class="export-btn" onclick="exportData()">📥 Esporta Risultati</button>
+        </div>
         
         <div class="footer">
             I dati vengono salvati automaticamente nel tuo dispositivo
@@ -216,24 +301,42 @@
     </div>
 
     <script>
-        const STORAGE_KEY = 'contatori_data';
-        const NUM_COUNTERS = 8;
-        let counters = [];
+        const STORAGE_KEY = 'voti_data';
+        
+        const candidates = [
+            { name: 'Voto di lista', special: true },
+            { name: 'Cannea Fabrizio', special: false },
+            { name: 'Loddo Francesca', special: false },
+            { name: 'Massidda Anna Maria', special: false },
+            { name: 'Matta Paolo', special: false },
+            { name: 'Mereu Sebastiano', special: false },
+            { name: 'Peddis Renzo', special: false },
+            { name: 'Piras Daniela', special: false },
+            { name: 'Sardara Giorgio', special: false },
+            { name: 'Serusi Nicola', special: false },
+            { name: 'Sini Patrizia', special: false },
+            { name: 'Tatti Michele', special: false },
+            { name: 'Tiddia Alberto', special: false }
+        ];
+        
+        let votes = [];
         
         // Carica i dati salvati
-        function loadCounters() {
+        function loadVotes() {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
-                counters = JSON.parse(saved);
+                votes = JSON.parse(saved);
             } else {
-                counters = Array(NUM_COUNTERS).fill(0);
+                votes = candidates.map(() => 0);
             }
             renderCounters();
+            updateSummary();
         }
         
         // Salva i dati
-        function saveCounters() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(counters));
+        function saveVotes() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(votes));
+            updateSummary();
         }
         
         // Renderizza i contatori
@@ -241,12 +344,12 @@
             const grid = document.getElementById('countersGrid');
             grid.innerHTML = '';
             
-            counters.forEach((value, index) => {
+            candidates.forEach((candidate, index) => {
                 const card = document.createElement('div');
-                card.className = 'counter-card';
+                card.className = 'counter-card' + (candidate.special ? ' special' : '');
                 card.innerHTML = `
-                    <div class="counter-name">Contatore ${index + 1}</div>
-                    <div class="counter-value" data-index="${index}">${value}</div>
+                    <div class="counter-name">${candidate.name}</div>
+                    <div class="counter-value" data-index="${index}">${votes[index]}</div>
                     <div class="counter-buttons">
                         <button class="btn-plus" onclick="increment(${index})">➕</button>
                         <button class="btn-minus" onclick="decrement(${index})">➖</button>
@@ -259,32 +362,45 @@
         
         // Incrementa
         function increment(index) {
-            counters[index]++;
-            saveCounters();
+            votes[index]++;
+            // Se non è il voto di lista, incrementa anche quello
+            if (index !== 0) {
+                votes[0]++;
+            }
+            saveVotes();
             updateValue(index);
+            if (index !== 0) {
+                updateValue(0);
+            }
         }
         
         // Decrementa
         function decrement(index) {
-            if (counters[index] > 0) {
-                counters[index]--;
-                saveCounters();
+            if (votes[index] > 0) {
+                votes[index]--;
+                saveVotes();
                 updateValue(index);
+            }
+            // Se non è il voto di lista e il voto di lista è > 0, decrementa anche quello
+            if (index !== 0 && votes[0] > 0) {
+                votes[0]--;
+                saveVotes();
+                updateValue(0);
             }
         }
         
         // Resetta singolo
         function reset(index) {
-            counters[index] = 0;
-            saveCounters();
+            votes[index] = 0;
+            saveVotes();
             updateValue(index);
         }
         
         // Resetta tutti
         function resetAll() {
             if (confirm('Sei sicuro di voler resettare tutti i contatori?')) {
-                counters = Array(NUM_COUNTERS).fill(0);
-                saveCounters();
+                votes = candidates.map(() => 0);
+                saveVotes();
                 renderCounters();
             }
         }
@@ -293,12 +409,50 @@
         function updateValue(index) {
             const element = document.querySelector(`[data-index="${index}"]`);
             if (element) {
-                element.textContent = counters[index];
+                element.textContent = votes[index];
             }
         }
         
+        // Aggiorna il riepilogo
+        function updateSummary() {
+            const total = votes.reduce((a, b) => a + b, 0);
+            document.getElementById('totalVotes').textContent = total;
+            
+            const maxVotes = Math.max(...votes);
+            if (maxVotes > 0) {
+                const topIndex = votes.indexOf(maxVotes);
+                document.getElementById('topCandidate').textContent = candidates[topIndex].name.split(' ')[0];
+            } else {
+                document.getElementById('topCandidate').textContent = '—';
+            }
+        }
+        
+        // Esporta i dati
+        function exportData() {
+            let text = 'CONTEGGIO VOTI\n';
+            text += '================\n\n';
+            
+            candidates.forEach((candidate, index) => {
+                text += candidate.name + ': ' + votes[index] + '\n';
+            });
+            
+            const total = votes.reduce((a, b) => a + b, 0);
+            text += '\n================\n';
+            text += 'TOTALE VOTI: ' + total + '\n';
+            
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', 'risultati_voti.txt');
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+            
+            alert('Risultati esportati! ✅');
+        }
+        
         // Inizializza
-        loadCounters();
+        loadVotes();
     </script>
 </body>
 </html>
