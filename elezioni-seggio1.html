@@ -63,22 +63,9 @@
             color: #c62828;
         }
         
-        .status.error {
-            background: #ffe0b2;
-            color: #e65100;
-        }
-        
-        .error-details {
-            background: #ffebee;
-            border: 1px solid #ef5350;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-size: 12px;
-            color: #c62828;
-            font-family: monospace;
-            max-height: 200px;
-            overflow-y: auto;
+        .status.loading {
+            background: #e3f2fd;
+            color: #1565c0;
         }
         
         .counters-grid {
@@ -174,6 +161,10 @@
             box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
         
+        .btn-plus:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
         .btn-minus {
             background: #f44336;
             color: white;
@@ -187,6 +178,10 @@
             box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
         }
         
+        .btn-minus:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
         .btn-reset {
             background: #ff9800;
             color: white;
@@ -198,6 +193,10 @@
             border-color: #e68900;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+        }
+        
+        .btn-reset:active:not(:disabled) {
+            transform: translateY(0);
         }
         
         .actions {
@@ -276,20 +275,40 @@
             color: #999;
             margin-top: 30px;
         }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .counters-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .reset-all, .export-btn {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>📊 Conteggio Voti</h1>
-            <p>Elezioni - Conteggio candidati (Firebase)</p>
+            <p>Elezioni - Conteggio candidati (Firebase Real-time)</p>
         </div>
         
         <div class="status" id="statusIndicator">
-            🔄 Connessione...
+            🔄 Connessione a Firebase...
         </div>
-        
-        <div class="error-details" id="errorDetails" style="display: none;"></div>
         
         <div class="summary">
             <div class="summary-item">
@@ -305,18 +324,20 @@
         <div class="counters-grid" id="countersGrid"></div>
         
         <div class="actions">
-            <button class="reset-all" onclick="resetAll()" id="resetBtn">🔄 Resetta Tutto</button>
-            <button class="export-btn" onclick="exportData()" id="exportBtn">📥 Esporta Risultati</button>
+            <button class="reset-all" onclick="resetAll()" id="resetBtn" disabled>🔄 Resetta Tutto</button>
+            <button class="export-btn" onclick="exportData()" id="exportBtn" disabled>📥 Esporta Risultati</button>
         </div>
         
         <div class="footer">
-            I dati vengono sincronizzati in tempo reale con Firebase
+            Sincronizzato in tempo reale con Firebase
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+        // CONFIGURAZIONE FIREBASE - SOSTITUISCI CON LE TUE CREDENZIALI
         const firebaseConfig = {
 
   apiKey: "AIzaSyD2X5-fZXj5QfrvyC9TFO6Ly7x5h7IQnDE",
@@ -336,7 +357,6 @@
 };
 
 
-        
         const candidates = [
             { name: 'Voto di lista', special: true },
             { name: 'Cannea Fabrizio', special: false },
@@ -352,110 +372,56 @@
             { name: 'Tatti Michele', special: false },
             { name: 'Tiddia Alberto', special: false }
         ];
-        
+
         let votes = Array(candidates.length).fill(0);
-        let isOnline = false;
         let database = null;
         let votesRef = null;
-        
-        function logError(msg) {
-            const errorDiv = document.getElementById('errorDetails');
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML += msg + '<br>';
-            console.error(msg);
-        }
-        
-        function initFirebase() {
-            try {
-                console.log('Inizializzazione Firebase...');
-                logError('📋 Configurazione Firebase:');
-                logError('API Key: ' + (firebaseConfig.apiKey === "YOUR_API_KEY" ? "❌ NON CONFIGURATO" : "✅ Configurato"));
-                logError('Project ID: ' + firebaseConfig.projectId);
-                logError('Database URL: ' + firebaseConfig.databaseURL);
-                logError('');
-                
-                if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-                    logError('❌ ERRORE: Le credenziali Firebase non sono configurate!');
-                    logError('Guida: Apri il file HTML in un editor, cerca "firebaseConfig" e inserisci le credenziali da Firebase Console');
-                    updateStatusError('Credenziali non configurate');
-                    return;
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            database = getDatabase(app);
+            votesRef = ref(database, 'votes');
+
+            onValue(votesRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    votes = data;
+                } else {
+                    votes = Array(candidates.length).fill(0);
                 }
-                
-                const app = firebase.initializeApp(firebaseConfig);
-                database = firebase.database(app);
-                votesRef = database.ref('votes');
-                
-                logError('✅ Firebase App inizializzato');
-                
-                // Ascolta i cambiamenti da Firebase
-                votesRef.on('value', 
-                    (snapshot) => {
-                        const data = snapshot.val();
-                        if (data) {
-                            votes = data;
-                        } else {
-                            votes = Array(candidates.length).fill(0);
-                        }
-                        renderCounters();
-                        updateSummary();
-                        logError('✅ Dati ricevuti da Firebase');
-                    }, 
-                    (error) => {
-                        logError('❌ Errore lettura dati: ' + error.code + ' - ' + error.message);
-                        updateStatusError('Errore: ' + error.code);
-                    }
-                );
-                
-                // Monitora la connessione
-                const connectedRef = database.ref('.info/connected');
-                connectedRef.on('value', (snapshot) => {
-                    isOnline = snapshot.val() === true;
-                    if (isOnline) {
-                        logError('✅ Connesso a Firebase');
-                        updateStatusOnline();
-                    } else {
-                        logError('⚠️ Disconnesso da Firebase');
-                        updateStatusOffline();
-                    }
-                }, (error) => {
-                    logError('❌ Errore connessione: ' + error.code);
-                });
-                
-            } catch (error) {
-                logError('❌ Errore fatale: ' + error.message);
-                updateStatusError('Errore: ' + error.message);
-            }
+                renderCounters();
+                updateSummary();
+                updateStatusOnline();
+            }, (error) => {
+                console.error('Errore Firebase:', error);
+                updateStatusError(error.code);
+            });
+
+        } catch (error) {
+            console.error('Errore inizializzazione:', error);
+            updateStatusError('Inizializzazione fallita');
         }
-        
+
         function updateStatusOnline() {
             const indicator = document.getElementById('statusIndicator');
             indicator.className = 'status online';
-            indicator.textContent = '✅ Connesso - Dati sincronizzati in tempo reale';
+            indicator.textContent = '✅ Connesso a Firebase - Sincronizzazione in tempo reale attiva';
             document.getElementById('resetBtn').disabled = false;
             document.getElementById('exportBtn').disabled = false;
         }
-        
-        function updateStatusOffline() {
-            const indicator = document.getElementById('statusIndicator');
-            indicator.className = 'status offline';
-            indicator.textContent = '⚠️ Non connesso - Attesa di connessione...';
-            document.getElementById('resetBtn').disabled = true;
-            document.getElementById('exportBtn').disabled = true;
-        }
-        
+
         function updateStatusError(msg) {
             const indicator = document.getElementById('statusIndicator');
-            indicator.className = 'status error';
-            indicator.textContent = '❌ ' + msg;
+            indicator.className = 'status offline';
+            indicator.textContent = '❌ Errore: ' + msg;
             document.getElementById('resetBtn').disabled = true;
             document.getElementById('exportBtn').disabled = true;
         }
-        
-        // Renderizza i contatori
+
         function renderCounters() {
             const grid = document.getElementById('countersGrid');
             grid.innerHTML = '';
-            
+
             candidates.forEach((candidate, index) => {
                 const card = document.createElement('div');
                 card.className = 'counter-card' + (candidate.special ? ' special' : '');
@@ -463,28 +429,26 @@
                     <div class="counter-name">${candidate.name}</div>
                     <div class="counter-value" data-index="${index}">${votes[index] || 0}</div>
                     <div class="counter-buttons">
-                        <button class="btn-plus" onclick="increment(${index})" ${!isOnline ? 'disabled' : ''}>➕</button>
-                        <button class="btn-minus" onclick="decrement(${index})" ${!isOnline ? 'disabled' : ''}>➖</button>
-                        <button class="btn-reset" onclick="reset(${index})" ${!isOnline ? 'disabled' : ''}>🔄</button>
+                        <button class="btn-plus" onclick="window.increment(${index})">➕</button>
+                        <button class="btn-minus" onclick="window.decrement(${index})">➖</button>
+                        <button class="btn-reset" onclick="window.reset(${index})">🔄</button>
                     </div>
                 `;
                 grid.appendChild(card);
             });
         }
-        
-        // Incrementa
-        function increment(index) {
+
+        window.increment = function(index) {
             if (!votesRef) return;
             const newVotes = [...votes];
             newVotes[index]++;
             if (index !== 0) {
                 newVotes[0]++;
             }
-            votesRef.set(newVotes).catch(e => logError('❌ Errore incremento: ' + e.message));
+            set(votesRef, newVotes);
         }
-        
-        // Decrementa
-        function decrement(index) {
+
+        window.decrement = function(index) {
             if (!votesRef) return;
             const newVotes = [...votes];
             if (newVotes[index] > 0) {
@@ -493,54 +457,49 @@
             if (index !== 0 && newVotes[0] > 0) {
                 newVotes[0]--;
             }
-            votesRef.set(newVotes).catch(e => logError('❌ Errore decremento: ' + e.message));
+            set(votesRef, newVotes);
         }
-        
-        // Resetta singolo
-        function reset(index) {
+
+        window.reset = function(index) {
             if (!votesRef) return;
             const newVotes = [...votes];
             newVotes[index] = 0;
-            votesRef.set(newVotes).catch(e => logError('❌ Errore reset: ' + e.message));
+            set(votesRef, newVotes);
         }
-        
-        // Resetta tutti
-        function resetAll() {
+
+        window.resetAll = function() {
             if (!votesRef) return;
             if (confirm('Sei sicuro di voler resettare tutti i contatori?')) {
-                votesRef.set(Array(candidates.length).fill(0)).catch(e => logError('❌ Errore reset tutto: ' + e.message));
+                set(votesRef, Array(candidates.length).fill(0));
             }
         }
-        
-        // Aggiorna il riepilogo
+
         function updateSummary() {
             const total = votes.reduce((a, b) => a + b, 0);
             document.getElementById('totalVotes').textContent = total;
-            
+
             const candidateVotes = votes.slice(1);
             const maxVotes = Math.max(...candidateVotes);
             if (maxVotes > 0) {
-                const topIndexInCandidates = candidateVotes.indexOf(maxVotes);
-                const topIndex = topIndexInCandidates + 1;
+                const topIndex = candidateVotes.indexOf(maxVotes) + 1;
                 document.getElementById('topCandidate').textContent = candidates[topIndex].name;
             } else {
                 document.getElementById('topCandidate').textContent = '—';
             }
         }
-        
-        // Esporta i dati
-        function exportData() {
+
+        window.exportData = function() {
             let text = 'CONTEGGIO VOTI\n';
             text += '================\n\n';
-            
+
             candidates.forEach((candidate, index) => {
                 text += candidate.name + ': ' + (votes[index] || 0) + '\n';
             });
-            
+
             const total = votes.reduce((a, b) => a + b, 0);
             text += '\n================\n';
             text += 'TOTALE VOTI: ' + total + '\n';
-            
+
             const element = document.createElement('a');
             element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
             element.setAttribute('download', 'risultati_voti.txt');
@@ -548,12 +507,10 @@
             document.body.appendChild(element);
             element.click();
             document.body.removeChild(element);
-            
+
             alert('Risultati esportati! ✅');
         }
-        
-        // Inizializza
-        initFirebase();
+
         renderCounters();
         updateSummary();
     </script>
