@@ -128,9 +128,11 @@
             <div class="seggio-badge" id="seggioBadge">—</div>
         </div>
 
+        <!-- RIQUADRO DEBUG NASCOSTO — per riattivarlo, togli i commenti qui sotto
         <div class="debug-box" id="debugBox">
             <div class="debug-line debug-info">🔍 Avviamento...</div>
         </div>
+        -->
 
         <div class="status" id="status">🔄 Inizializzazione...</div>
 
@@ -201,13 +203,14 @@
         document.title = '📊 Conteggio Voti — ' + SEGGIO.toUpperCase();
 
         function debug(msg, type = 'info') {
+            console.log(msg);
             const box = document.getElementById('debugBox');
+            if (!box) return; // riquadro debug commentato: scrive solo in console
             const line = document.createElement('div');
             line.className = 'debug-line debug-' + type;
             line.textContent = msg;
             box.appendChild(line);
             box.scrollTop = box.scrollHeight;
-            console.log(msg);
         }
 
         function initFirebase() {
