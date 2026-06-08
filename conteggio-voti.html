@@ -328,13 +328,11 @@
 
         function inc(i) {
             votes[i]++;
-            if (i !== 0) votes[0]++;
             votesRef.set(votes);
         }
 
         function dec(i) {
             if (votes[i] > 0) votes[i]--;
-            if (i !== 0 && votes[0] > 0) votes[0]--;
             votesRef.set(votes);
         }
 
