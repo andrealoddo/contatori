@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Conteggio Voti</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+        .debug-box {
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            color: #333;
+            line-height: 1.6;
+        }
+        .debug-line { margin: 5px 0; }
+        .debug-ok { color: #4CAF50; }
+        .debug-error { color: #f44336; }
+        .debug-warning { color: #ff9800; }
+        .debug-info { color: #2196F3; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 32px; color: #333; }
+        .seggio-badge {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 6px 16px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .status.online { background: #c8e6c9; color: #2e7d32; }
+        .status.offline { background: #ffcdd2; color: #c62828; }
+        .counters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .counter-card {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .counter-card.special { background: #fff3e0; border-color: #ff9800; }
+        .counter-name { font-size: 13px; color: #999; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; }
+        .counter-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 14px;
+        }
+        .counter-buttons { display: flex; gap: 6px; }
+        button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-plus { background: #4CAF50; color: white; }
+        .btn-plus:hover:not(:disabled) { background: #45a049; }
+        .btn-minus { background: #f44336; color: white; }
+        .btn-minus:hover:not(:disabled) { background: #da190b; }
+        .btn-reset { background: #ff9800; color: white; }
+        .btn-reset:hover:not(:disabled) { background: #e68900; }
+        .summary {
+            background: #f0f1f5;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .summary-item { display: inline-block; margin: 8px 16px; }
+        .summary-label { font-size: 12px; color: #999; font-weight: 600; }
+        .summary-value { font-size: 24px; font-weight: 700; color: #667eea; }
+        .actions { display: flex; gap: 12px; justify-content: center; }
+        .reset-all, .export-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .reset-all { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .export-btn { background: #2196F3; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Conteggio Voti</h1>
+            <div class="seggio-badge" id="seggioBadge">—</div>
+        </div>
+
+        <div class="debug-box" id="debugBox">
+            <div class="debug-line debug-info">🔍 Avviamento...</div>
+        </div>
+
+        <div class="status" id="status">🔄 Inizializzazione...</div>
+
+        <div class="summary">
+            <div class="summary-item">
+                <div class="summary-label">Voti Totali</div>
+                <div class="summary-value" id="totalVotes">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Candidato più votato</div>
+                <div class="summary-value" id="topCandidate">—</div>
+            </div>
+        </div>
+
+        <div class="counters-grid" id="grid"></div>
+
+        <div class="actions">
+            <button class="reset-all" onclick="resetAll()" id="resetBtn" disabled>🔄 Resetta Tutto</button>
+            <button class="export-btn" onclick="exportData()" id="exportBtn" disabled>📥 Esporta</button>
+        </div>
+    </div>
+
+    <!-- SDK Firebase "compat": espongono l'oggetto globale `firebase` usato dal codice. -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD2X5-fZXj5QfrvyC9TFO6Ly7x5h7IQnDE",
+            authDomain: "contatore-voti-5608a.firebaseapp.com",
+            databaseURL: "https://contatore-voti-5608a-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "contatore-voti-5608a",
+            storageBucket: "contatore-voti-5608a.firebasestorage.app",
+            messagingSenderId: "660900086410",
+            appId: "1:660900086410:web:8a832a016cf7c460b0a373"
+        };
+
+        // --- Seggio letto dall'URL: ?seggio=1, ?seggio=2, ?seggio=3 ---
+        // Se manca, usa 'seggio1' come predefinito.
+        const params = new URLSearchParams(window.location.search);
+        let SEGGIO = (params.get('seggio') || '1').trim();
+        // Accetta sia "1" che "seggio1"
+        if (/^\d+$/.test(SEGGIO)) SEGGIO = 'seggio' + SEGGIO;
+        // Rimuove caratteri non validi per un percorso Firebase
+        SEGGIO = SEGGIO.replace(/[.#$\[\]\/]/g, '');
+
+        const candidates = [
+            { name: 'Voto di lista', special: true },
+            { name: 'Cannea Fabrizio', special: false },
+            { name: 'Loddo Francesca', special: false },
+            { name: 'Massidda Anna Maria', special: false },
+            { name: 'Matta Paolo', special: false },
+            { name: 'Mereu Sebastiano', special: false },
+            { name: 'Peddis Renzo', special: false },
+            { name: 'Piras Daniela', special: false },
+            { name: 'Sardara Giorgio', special: false },
+            { name: 'Serusi Nicola', special: false },
+            { name: 'Sini Patrizia', special: false },
+            { name: 'Tatti Michele', special: false },
+            { name: 'Tiddia Alberto', special: false }
+        ];
+
+        let votes = Array(candidates.length).fill(0);
+        let votesRef = null;
+        let isConnected = false;
+
+        document.getElementById('seggioBadge').textContent = '🗳️ ' + SEGGIO.toUpperCase();
+        document.title = '📊 Conteggio Voti — ' + SEGGIO.toUpperCase();
+
+        function debug(msg, type = 'info') {
+            const box = document.getElementById('debugBox');
+            const line = document.createElement('div');
+            line.className = 'debug-line debug-' + type;
+            line.textContent = msg;
+            box.appendChild(line);
+            box.scrollTop = box.scrollHeight;
+            console.log(msg);
+        }
+
+        function initFirebase() {
+            debug('⏳ Verificando Firebase SDK...', 'info');
+
+            if (typeof firebase === 'undefined') {
+                debug('❌ Firebase non ancora caricato, riprovo tra 1 sec...', 'warning');
+                setTimeout(initFirebase, 1000);
+                return;
+            }
+
+            debug('✅ Firebase SDK caricato', 'ok');
+            debug('🗳️ Seggio attivo: ' + SEGGIO, 'info');
+            debug('⏳ Verificando credenziali...', 'info');
+
+            if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+                debug('❌ CREDENZIALI NON CONFIGURATE!', 'error');
+                setStatus('❌ Credenziali non configurate', false);
+                return;
+            }
+
+            debug('✅ Credenziali trovate', 'ok');
+            debug('⏳ Inizializzando Firebase App...', 'info');
+
+            try {
+                const app = firebase.initializeApp(firebaseConfig);
+                debug('✅ Firebase App inizializzato', 'ok');
+
+                const db = firebase.database(app);
+                debug('✅ Database connesso', 'ok');
+
+                // Ogni seggio scrive sul proprio ramo: votes/seggio1, votes/seggio2, ...
+                votesRef = db.ref('votes/' + SEGGIO);
+                debug('✅ Riferimento database creato: votes/' + SEGGIO, 'ok');
+
+                debug('⏳ Monitorando connessione...', 'info');
+
+                const connRef = db.ref('.info/connected');
+                let connectedOnce = false;
+
+                connRef.on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        if (!connectedOnce) {
+                            debug('✅ CONNESSO A FIREBASE', 'ok');
+                            connectedOnce = true;
+                        }
+                        isConnected = true;
+                        setStatus('✅ Connesso a Firebase — ' + SEGGIO.toUpperCase(), true);
+                        render();
+
+                        debug('⏳ Caricando dati...', 'info');
+                        votesRef.once('value', (snap) => {
+                            if (!snap.exists()) {
+                                debug('⏳ Seggio vuoto, inizializzo...', 'warning');
+                                votesRef.set(Array(candidates.length).fill(0)).then(() => {
+                                    debug('✅ Seggio inizializzato', 'ok');
+                                }).catch((err) => {
+                                    debug('❌ Errore init: ' + err.message, 'error');
+                                });
+                            } else {
+                                debug('✅ Dati caricati da Firebase', 'ok');
+                            }
+                        }).catch((err) => {
+                            debug('❌ Errore lettura iniziale: ' + err.message, 'error');
+                            debug('Codice errore: ' + err.code, 'error');
+                            setStatus('❌ ' + err.code, false);
+                        });
+                    } else {
+                        debug('⚠️ Disconnesso da Firebase', 'warning');
+                        isConnected = false;
+                        setStatus('⚠️ Disconnesso', false);
+                        render();
+                    }
+                }, (err) => {
+                    debug('❌ Errore monitoraggio connessione: ' + err.message, 'error');
+                });
+
+                debug('⏳ Monitorando dati...', 'info');
+
+                votesRef.on('value', (snapshot) => {
+                    votes = snapshot.val() || Array(candidates.length).fill(0);
+                    debug('✅ Dati aggiornati', 'ok');
+                    render();
+                }, (err) => {
+                    debug('❌ Errore lettura dati: ' + err.message, 'error');
+                    debug('Codice errore: ' + err.code, 'error');
+                    setStatus('❌ ' + err.code, false);
+                });
+
+            } catch (err) {
+                debug('❌ ERRORE FATALE: ' + err.message, 'error');
+                setStatus('❌ ' + err.message, false);
+            }
+        }
+
+        function render() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            candidates.forEach((c, i) => {
+                const card = document.createElement('div');
+                card.className = 'counter-card' + (c.special ? ' special' : '');
+                card.innerHTML = `
+                    <div class="counter-name">${c.name}</div>
+                    <div class="counter-value" data-i="${i}">${votes[i] || 0}</div>
+                    <div class="counter-buttons">
+                        <button class="btn-plus" onclick="inc(${i})" ${!isConnected ? 'disabled' : ''}>➕</button>
+                        <button class="btn-minus" onclick="dec(${i})" ${!isConnected ? 'disabled' : ''}>➖</button>
+                        <button class="btn-reset" onclick="res(${i})" ${!isConnected ? 'disabled' : ''}>🔄</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            updateSummary();
+        }
+
+        function inc(i) {
+            votes[i]++;
+            if (i !== 0) votes[0]++;
+            votesRef.set(votes);
+        }
+
+        function dec(i) {
+            if (votes[i] > 0) votes[i]--;
+            if (i !== 0 && votes[0] > 0) votes[0]--;
+            votesRef.set(votes);
+        }
+
+        function res(i) {
+            votes[i] = 0;
+            votesRef.set(votes);
+        }
+
+        function resetAll() {
+            if (confirm('Resettare tutto il ' + SEGGIO.toUpperCase() + '?')) {
+                votes = Array(candidates.length).fill(0);
+                votesRef.set(votes);
+            }
+        }
+
+        function updateSummary() {
+            const tot = votes.reduce((a, b) => a + b, 0);
+            document.getElementById('totalVotes').textContent = tot;
+
+            const cVotes = votes.slice(1);
+            const max = Math.max(...cVotes);
+            if (max > 0) {
+                const topIdx = cVotes.indexOf(max) + 1;
+                document.getElementById('topCandidate').textContent = candidates[topIdx].name;
+            } else {
+                document.getElementById('topCandidate').textContent = '—';
+            }
+        }
+
+        function setStatus(msg, connected) {
+            const status = document.getElementById('status');
+            status.textContent = msg;
+            status.className = connected ? 'status online' : 'status offline';
+            document.getElementById('resetBtn').disabled = !connected;
+            document.getElementById('exportBtn').disabled = !connected;
+        }
+
+        function exportData() {
+            let txt = 'CONTEGGIO VOTI — ' + SEGGIO.toUpperCase() + '\n================\n\n';
+            candidates.forEach((c, i) => {
+                txt += c.name + ': ' + (votes[i] || 0) + '\n';
+            });
+            txt += '\n================\nTOTALE: ' + votes.reduce((a, b) => a + b, 0) + '\n';
+
+            const a = document.createElement('a');
+            a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(txt);
+            a.download = 'voti-' + SEGGIO + '.txt';
+            a.click();
+        }
+
+        render();
+        initFirebase();
+    </script>
+</body>
+</html>
